@@ -8,7 +8,7 @@ PG1 (R3) — **Information Extractor** 그룹의 첫 번째 에이전트.
 | 항목 | 값 |
 | --- | --- |
 | agent_id | `Material_Collector` |
-| input | `file_stream / pdf` — 강의자료 PDF |
+| input | `exam_generation_system/agents/material_collector/materials/` — 강의자료 PDF |
 | output | `MaterialCollectorOutput` (Pydantic, payload of MessageEnvelope) |
 | next agent | `Topic_Analyzer` |
 | routing_status | `flow` |
