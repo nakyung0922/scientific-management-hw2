@@ -147,6 +147,9 @@ class ConceptNode(StrictBase):
     source_pages: list[str] = Field(default_factory=list)
     # embedding_vector는 별도 저장소 권장 — 스키마엔 optional로
     embedding_vector: Optional[list[float]] = None
+    # Topic_Prioritizer가 cosine sim + importance + intrinsic 가중합으로 채움.
+    # ExamPlanner는 이 값을 LLM 프롬프트에 포함시켜 슬롯 배정 우선순위에 활용.
+    priority_score: Optional[float] = Field(default=None, ge=0.0, le=1.0)
 
     @field_validator("concept_id")
     @classmethod
