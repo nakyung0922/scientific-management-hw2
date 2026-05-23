@@ -43,11 +43,11 @@ from common.schemas import (
 )
 from config.defaults import THRESHOLDS
 
-# PG1 (R3) 에이전트 — 구현 완료 후 import 연결
-# from agents.material_collector import MaterialCollector
-# from agents.req_parser import ReqParser
-# from agents.topic_analyzer import TopicAnalyzer
-# from agents.topic_prioritizer import TopicPrioritizer
+# PG1 (R3) 에이전트
+from agents.material_collector import MaterialCollector
+from agents.req_parser import ReqParser
+from agents.topic_analyzer import TopicAnalyzer
+from agents.topic_prioritizer import TopicPrioritizer
 
 # PG2 (R4) 에이전트 — 구현 완료
 from agents.exam_planner import ExamPlanner
@@ -292,63 +292,30 @@ class Supervisor:
             # raw_text = MaterialCollector(self.client).collect(pdf_paths, session_id)
             # return TopicAnalyzer(self.client).analyze(raw_text, session_id)
 
-            # ── STUB ──
-            print("    [STUB] MaterialCollector → TopicAnalyzer (R3 구현 대기)")
-            from common.enums import DifficultyLevel, Importance, QuestionType
-            from common.schemas import ConceptNode, ConceptEdge
-
-            stub_nodes = [
-                ConceptNode(
-                    concept_id="M1_1_scientific_management",
-                    concept_name="Scientific Management",
-                    depth_in_tree=0,
-                    importance=Importance.HIGH,
-                    intrinsic_difficulty_level=DifficultyLevel.L3,
-                    suitable_question_types=[
-                        QuestionType.LONG_ANSWER,
-                        QuestionType.CASE_ANALYSIS,
-                    ],
-                    source_pages=["M1.1 p.1-5"],
-                ),
-                ConceptNode(
-                    concept_id="M1_3_therbligs",
-                    concept_name="Therbligs",
-                    depth_in_tree=1,
-                    parent_concept_id="M1_1_scientific_management",
-                    importance=Importance.MEDIUM,
-                    intrinsic_difficulty_level=DifficultyLevel.L1,
-                    suitable_question_types=[QuestionType.SHORT_ANSWER],
-                    source_pages=["M1.3 p.5-8"],
-                ),
-                ConceptNode(
-                    concept_id="M2_1_5_kj_method",
-                    concept_name="KJ Method",
-                    depth_in_tree=2,
-                    parent_concept_id="M1_1_scientific_management",
-                    importance=Importance.HIGH,
-                    intrinsic_difficulty_level=DifficultyLevel.L4,
-                    suitable_question_types=[
-                        QuestionType.LONG_ANSWER,
-                        QuestionType.CASE_ANALYSIS,
-                    ],
-                    source_pages=["M2.1.5 p.1-10"],
-                ),
-            ]
-            stub_edges = [
-                ConceptEdge(
-                    from_concept_id="M1_1_scientific_management",
-                    to_concept_id="M1_3_therbligs",
-                    relation="parent_of",
-                    weight=1.0,
-                ),
-                ConceptEdge(
-                    from_concept_id="M1_3_therbligs",
-                    to_concept_id="M1_1_scientific_management",
-                    relation="child_of",
-                    weight=1.0,
-                ),
-            ]
-            return ConceptKnowledgeStructure(nodes=stub_nodes, edges=stub_edges)
+            # ── 실제 R3 에이전트 호출 ──
+            print("    [R3] MaterialCollector → TopicAnalyzer 실행 중...")
+            try:
+                from common.embedding_client import EmbeddingClient
+                embedding_client = EmbeddingClient(self.client)
+            except ImportError:
+                logger.warning("embedding_client 모듈 없음 — embeddings 비어있음으로 진행")
+                embedding_client = None
+                self._last_embeddings = {}
+            summaries = MaterialCollector(self.client).collect(pdf_paths, session_id)
+            if embedding_client is not None:
+                structure, embeddings = TopicAnalyzer(self.client, embedding_client).analyze(
+                    summaries, session_id=session_id
+                )
+                self._last_embeddings = embeddings
+            else:
+                structure = TopicAnalyzer(self.client, None).analyze(
+                    summaries, session_id=session_id
+                )
+                if isinstance(structure, tuple):
+                    structure, emb = structure
+                    self._last_embeddings = emb
+            print(f"    ✔ [TopicAnalyzer] 노드 수: {len(structure.nodes)}")
+            return structure
 
         except Exception as e:
             logger.error(f"[Input1] 오류: {e}")
@@ -369,31 +336,11 @@ class Supervisor:
             # from agents.req_parser import ReqParser
             # return ReqParser(self.client).parse(requirements, session_id)
 
-            # ── STUB ──
-            print("    [STUB] ReqParser (R3 구현 대기)")
-            from common.schemas import (
-                DifficultyDistributionGroup,
-                QuestionTypeDistribution,
-                ReqVector,
-            )
-            return ReqVector(
-                exam_title="Scientific Management 중간고사",
-                exam_type="midterm",
-                target_chapters_or_concepts=[
-                    "M1_1", "M1_2", "M1_3", "M1_4", "M1_5",
-                    "M2_1_1", "M2_1_2", "M2_1_3", "M2_1_5",
-                    "M3_1_1", "manufacturing_overview",
-                ],
-                total_points=100,
-                duration_minutes=75,
-                evaluation_focus="balanced",
-                difficulty_distribution_group=DifficultyDistributionGroup(
-                    easy=2, medium=6, hard=2
-                ),
-                question_type_distribution=QuestionTypeDistribution(
-                    short_answer=2, long_answer=5, case_analysis=3
-                ),
-            )
+            # ── 실제 R3 에이전트 호출 ──
+            print("    [R3] ReqParser 실행 중...")
+            req = ReqParser(self.client).parse(requirements, session_id=session_id)
+            print(f"    ✔ [ReqParser] 완료")
+            return req
 
         except Exception as e:
             logger.error(f"[Input2] 오류: {e}")
@@ -420,15 +367,20 @@ class Supervisor:
             # )
             # return wrap_payload(...)
 
-            # ── STUB: knowledge_structure를 그대로 전달 ──
-            print("  [STUB] TopicPrioritizer (R3 구현 대기)")
+            # ── 실제 R3 에이전트 호출 ──
+            embeddings = getattr(self, "_last_embeddings", {})
+            enriched = TopicPrioritizer().prioritize(
+                structure=knowledge_structure,
+                embeddings=embeddings,
+                req_vector=req_vector,
+            )
             env = wrap_payload(
                 session_id=session_id,
                 source_agent="Topic_Prioritizer",
                 target_agent="Exam_Planner",
-                payload=knowledge_structure,
+                payload=enriched,
             )
-            print(f"  ✔ [Topic Prioritizer] 완료")
+            print(f"  ✔ [Topic Prioritizer] 완료 | 노드 수: {len(enriched.nodes)}")
             return env
 
         except Exception as e:
