@@ -56,6 +56,49 @@ class MessageEnvelope(StrictBase):
 
 
 # ────────────────────────────────────────────────────────────
+# raw_document & concept_summary (Material_Collector 출력)
+# ────────────────────────────────────────────────────────────
+class PageText(StrictBase):
+    """단일 PDF 페이지의 추출 텍스트."""
+    page_no: int = Field(ge=1)
+    text: str
+
+
+class RawDocument(StrictBase):
+    """단일 PDF 파일 → 모듈 단위 raw text.
+
+    Material_Collector의 Pass 1 산출물. pypdf로 페이지별 텍스트만 추출한 상태.
+    LLM 호출 전이므로 어떤 요약도 들어있지 않음.
+    """
+    module_id: str = Field(
+        description="파일명 휴리스틱으로 추정한 모듈 ID. "
+                    "예: 'M1_1', 'M2_1_2', 'manufacturing_overview'"
+    )
+    source_filename: str
+    pages: list[PageText] = Field(min_length=1)
+
+
+class ConceptSummary(StrictBase):
+    """모듈 1개의 요약 + 핵심 개념 후보.
+
+    Material_Collector의 Pass 2 산출물. Topic_Analyzer 입력.
+    LLM이 RawDocument를 받아 모듈 단위로 요약·핵심 phrase를 뽑음.
+    """
+    module_id: str
+    source_filename: str
+    title: str = Field(description="모듈 제목 (예: 'What is Work?')")
+    summary_text: str = Field(
+        description="모듈 전체의 1~3문단 요약. Topic_Analyzer가 LLM에 전달할 컨텍스트."
+    )
+    key_phrases: list[str] = Field(
+        default_factory=list,
+        description="핵심 개념 후보 (LLM이 자유롭게 뽑음, Topic_Analyzer가 정제·노드화)."
+    )
+    page_count: int = Field(ge=1)
+    warnings: list[str] = Field(default_factory=list)
+
+
+# ────────────────────────────────────────────────────────────
 # req_vector (Req_Parser 출력)
 # ────────────────────────────────────────────────────────────
 class DifficultyDistributionGroup(StrictBase):
