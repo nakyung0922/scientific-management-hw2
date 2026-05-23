@@ -494,12 +494,8 @@ class Supervisor:
             try:
                 question = self.qa_generator.generate_one(
                     slot=slot,
-                    knowledge_structure=knowledge_structure,
+                    structure=knowledge_structure,
                     session_id=session_id,
-                    attempt_number=attempt,
-                    previous_question_id=(
-                        sr.question.question_id if sr.question else None
-                    ),
                 )
                 sr.question = question
                 print(f"    ✔ [Q&A Generator] question_id={question.question_id}")
@@ -650,8 +646,6 @@ class Supervisor:
                 format_warnings = format_result.warnings  # PDF 변환 실패 등
 
             payload_dict = qa_paper.model_dump()
-            if format_warnings:
-                payload_dict["_format_warnings"] = format_warnings
 
             env = wrap_payload(
                 session_id=session_id,
