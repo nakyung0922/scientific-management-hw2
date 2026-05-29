@@ -20,6 +20,7 @@ R5 인터페이스 규칙:
   - TesterOutput.next_action.routing_status 기준 라우팅
 """
 from __future__ import annotations
+from pathlib import Path
 
 import concurrent.futures
 import logging
@@ -294,26 +295,14 @@ class Supervisor:
 
             # ── 실제 R3 에이전트 호출 ──
             print("    [R3] MaterialCollector → TopicAnalyzer 실행 중...")
-            try:
-                from common.embedding_client import EmbeddingClient
-                embedding_client = EmbeddingClient(self.client)
-            except ImportError:
-                logger.warning("embedding_client 모듈 없음 — embeddings 비어있음으로 진행")
-                embedding_client = None
-                self._last_embeddings = {}
-            summaries = MaterialCollector(self.client).collect(pdf_paths, session_id)
-            if embedding_client is not None:
-                structure, embeddings = TopicAnalyzer(self.client, embedding_client).analyze(
-                    summaries, session_id=session_id
-                )
-                self._last_embeddings = embeddings
-            else:
-                structure = TopicAnalyzer(self.client, None).analyze(
-                    summaries, session_id=session_id
-                )
-                if isinstance(structure, tuple):
-                    structure, emb = structure
-                    self._last_embeddings = emb
+            from common.embedding_client import EmbeddingClient
+            embedding_client = EmbeddingClient()  # client 인수 없음
+            pdf_path_objs = [Path(p) for p in pdf_paths]
+            summaries = MaterialCollector(self.client).collect(pdf_path_objs)
+            structure, embeddings = TopicAnalyzer(self.client, embedding_client).analyze(
+                summaries, session_id=session_id
+            )
+            self._last_embeddings = embeddings
             print(f"    ✔ [TopicAnalyzer] 노드 수: {len(structure.nodes)}")
             return structure
 
@@ -338,7 +327,7 @@ class Supervisor:
 
             # ── 실제 R3 에이전트 호출 ──
             print("    [R3] ReqParser 실행 중...")
-            req = ReqParser(self.client).parse(requirements, session_id=session_id)
+            req = ReqParser(self.client).parse(requirements)
             print(f"    ✔ [ReqParser] 완료")
             return req
 
@@ -505,12 +494,8 @@ class Supervisor:
             try:
                 question = self.qa_generator.generate_one(
                     slot=slot,
-                    knowledge_structure=knowledge_structure,
+                    structure=knowledge_structure,
                     session_id=session_id,
-                    attempt_number=attempt,
-                    previous_question_id=(
-                        sr.question.question_id if sr.question else None
-                    ),
                 )
                 sr.question = question
                 print(f"    ✔ [Q&A Generator] question_id={question.question_id}")
@@ -661,8 +646,6 @@ class Supervisor:
                 format_warnings = format_result.warnings  # PDF 변환 실패 등
 
             payload_dict = qa_paper.model_dump()
-            if format_warnings:
-                payload_dict["_format_warnings"] = format_warnings
 
             env = wrap_payload(
                 session_id=session_id,
