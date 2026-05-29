@@ -481,13 +481,22 @@ class ExamPlanner:
         if missing:
             warnings.append(f"미커버 챕터: {missing}")
 
-        # points 합 검증
+        # 배점 합 조정: case_analysis 슬롯 끝에서부터 1점씩 감산
         total_pts_computed = sum(s.points for s in slots)
-        if total_pts_computed != req.total_points:
-            warnings.append(
-                f"배점 합 불일치: computed={total_pts_computed}, "
-                f"req={req.total_points}"
-            )
+        excess = total_pts_computed - req.total_points
+        if excess != 0:
+            ca_indices = [
+                i for i, s in enumerate(slots)
+                if s.question_type == QuestionType.CASE_ANALYSIS
+            ]
+            if 0 < excess <= len(ca_indices):
+                for idx in ca_indices[-excess:]:
+                    slots[idx].points -= 1
+            else:
+                warnings.append(
+                    f"배점 합 불일치: computed={total_pts_computed}, "
+                    f"req={req.total_points} — 자동 조정 불가"
+                )
 
         # Blueprint 조립
         blueprint = ExamBlueprint(

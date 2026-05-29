@@ -51,9 +51,7 @@ POINTS_PER_TYPE: Final[dict] = {
     "long_answer": 12,
     "case_analysis": 7,
 }
-# 검증: 2*10 + 5*12 + 3*7 = 20 + 60 + 21 = 101 ≠ 100
-# 조정: case_analysis 중 하나는 6점
-# (Exam Planner가 슬롯별로 미세 조정하도록 위임)
+# 합산 시 101점이 나오므로 Exam Planner가 case_analysis 슬롯 끝에서 1점 차감하여 100점으로 맞춤
 
 
 # ────────────────────────────────────────────────────────────
