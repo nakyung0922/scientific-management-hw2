@@ -185,7 +185,7 @@ class PaperFormattor:
     def _add_header(self, doc: Document, answer_key: bool = False) -> None:
         title = (
             f"{EXAM_METADATA['course_name_kr']} ({EXAM_METADATA['course_name_en']}) "
-            f"— {EXAM_METADATA['semester']} 학기 기말시험"
+            f"— {EXAM_METADATA['semester']} 학기 중간고사"
         )
         if answer_key:
             title += "  [ANSWER KEY (교수용)]"
