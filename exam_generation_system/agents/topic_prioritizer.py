@@ -196,6 +196,10 @@ class TopicPrioritizer:
         # 3. importance weight (0.33~1)
         imp = IMPORTANCE_WEIGHTS.get(node.importance, 0.5)
 
+        # priority_score = 0.5·target_match + 0.3·cosine_sim + 0.2·importance
+        # target_match: ReqVector 지정 챕터/개념에 속하면 1.0, 아니면 0.0
+        # cosine_sim:   노드 embedding과 target centroid 간 평균 유사도 (→ [0,1])
+        # importance:   high=1.0 / medium=0.66 / low=0.33
         score = (
             W_TARGET_MATCH * target_match
             + W_SIMILARITY * sim

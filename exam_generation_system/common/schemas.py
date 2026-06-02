@@ -1,5 +1,5 @@
 """
-Pydantic models implementing the v0.4 JSON schema.
+Pydantic models implementing the v0.5 JSON schema.
 
 모든 agent 간 메시지 payload의 타입 안전한 표현.
 JSON 직렬화/역직렬화는 model.model_dump_json() / model.model_validate_json() 사용.

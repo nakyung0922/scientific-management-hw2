@@ -232,7 +232,9 @@ def difficulty_alignment_score(
 ) -> float:
     """예상 D와 추정 D의 정렬도를 [0, 1]로 반환.
 
+    score = 1 - |expected_D - estimated_D|
     1.0 = 완전 일치, 0.0 = 최대 불일치 (|diff| = 1.0).
+    threshold = 0.60 미달 시 Exam_Planner에 difficulty_correction 요청.
 
     Difficulty_Tester가 verdict 판정에 사용.
     """

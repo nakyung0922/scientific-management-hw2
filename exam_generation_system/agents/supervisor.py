@@ -485,6 +485,9 @@ class Supervisor:
         attempt = 0
         difficulty_correction_triggered = False
 
+        # 품질 제어 루프: QA Generator → Factfulness → Difficulty 순으로 검증.
+        # Factfulness FAIL → 문항 재생성(question_rework), 최대 MAX_QUESTION_RETRY회.
+        # Difficulty FAIL  → 현재 문항은 유지하고 후속 슬롯 레벨을 Planner가 재조정.
         while attempt < self.MAX_QUESTION_RETRY:
             attempt += 1
             sr.attempts = attempt

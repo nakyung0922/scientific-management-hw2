@@ -444,10 +444,19 @@ class ExamPlanner:
                 )
                 continue
 
-            # X1: primary 간 최대 거리 → 정규화
+            # X1: 배정된 primary concept 간 그래프 최대 hop 거리를 0~1로 정규화
+            #   - 단일 개념(거리=0) → X1=0.00 (L1 범위)
+            #   - 인접 형제 개념(거리=1) → X1=0.25
+            #   - 여러 범주 교차(거리≥4) → X1=1.00 (L5 범위)
             max_dist = get_max_distance_in_subset(structure, primary_ids)
             x1 = compute_x1(max(0, max_dist))
+
+            # X2: 문항 유형에 따른 인지 부하 (Bloom's Taxonomy 기반)
+            #   - short_answer=0.4, long_answer=0.7, case_analysis=1.0
             x2 = compute_x2(qtype)
+
+            # D = α·X1 + β·X2  (BALANCED: α=β=0.5)
+            # D 값을 L1~L5 정수 레벨로 매핑
             d = compute_d(x1, x2, focus)
             computed_level = d_to_level(d)
 
@@ -481,7 +490,9 @@ class ExamPlanner:
         if missing:
             warnings.append(f"미커버 챕터: {missing}")
 
-        # 배점 합 조정: case_analysis 슬롯 끝에서부터 1점씩 감산
+        # 배점 합 조정: 문항 유형별 단가(POINTS_PER_TYPE)의 합이 total_points와
+        # 정확히 일치하지 않을 수 있음 (예: 2×10 + 5×12 + 3×7 = 101 ≠ 100).
+        # 초과분은 제약이 가장 느슨한 case_analysis 슬롯 뒤에서부터 1점씩 차감.
         total_pts_computed = sum(s.points for s in slots)
         excess = total_pts_computed - req.total_points
         if excess != 0:
