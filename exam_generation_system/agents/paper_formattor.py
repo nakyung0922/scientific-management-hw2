@@ -12,7 +12,7 @@ from typing import Optional
 
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.shared import Pt
+from docx.shared import Cm, Pt
 from pydantic import Field
 
 from common.schemas import (
@@ -239,6 +239,10 @@ class PaperFormattor:
             sec_pts = section.num_questions * section.points_per_question
             sec_name = _SECTION_NAMES.get(qtype, qtype)
 
+            # 2번째 섹션부터는 새 페이지에서 시작해 섹션 헤더를 첫 문제와 같이 배치
+            if sec_idx > 1:
+                doc.add_page_break()
+
             sec_para = doc.add_paragraph()
             run = sec_para.add_run(
                 f"Section {sec_idx}. {sec_name} "
@@ -253,7 +257,11 @@ class PaperFormattor:
             ]
             space = _ANSWER_SPACE_LINES.get(qtype, 4)
 
-            for q in sec_questions:
+            for q_idx, q in enumerate(sec_questions):
+                # 같은 섹션 내 2번째 문제부터 페이지 나누기
+                if q_idx > 0:
+                    doc.add_page_break()
+
                 q_para = doc.add_paragraph()
                 q_run = q_para.add_run(f"문제 {q_num}. [{q.points}점]")
                 q_run.bold = True
@@ -292,6 +300,10 @@ class PaperFormattor:
             sec_pts = section.num_questions * section.points_per_question
             sec_name = _SECTION_NAMES.get(qtype, qtype)
 
+            # 2번째 섹션부터는 새 페이지에서 시작해 섹션 헤더를 첫 문제와 같이 배치
+            if sec_idx > 1:
+                doc.add_page_break()
+
             sec_para = doc.add_paragraph()
             run = sec_para.add_run(
                 f"Section {sec_idx}. {sec_name} "
@@ -305,7 +317,11 @@ class PaperFormattor:
                 q for q in ordered_questions if _qtype_str(q.question_type) == qtype
             ]
 
-            for q in sec_questions:
+            for q_idx, q in enumerate(sec_questions):
+                # 같은 섹션 내 2번째 문제부터 페이지 나누기
+                if q_idx > 0:
+                    doc.add_page_break()
+
                 # 문제 번호 + 배점
                 q_para = doc.add_paragraph()
                 q_run = q_para.add_run(f"문제 {q_num}. [{q.points}점]")
@@ -337,6 +353,13 @@ class PaperFormattor:
             table.style = "Table Grid"
         except Exception:
             pass
+
+        # 열 폭 설정 (A4 가용 폭 ≈ 15.9cm)
+        # 기준 ID·배점은 좁게, 핵심 요소·부분점수 기준은 넓게
+        col_widths = [Cm(1.2), Cm(3.2), Cm(1.2), Cm(5.0), Cm(5.3)]
+        for col_idx, width in enumerate(col_widths):
+            for cell in table.column_cells(col_idx):
+                cell.width = width
 
         # 헤더 행
         headers = ["기준 ID", "평가 항목", "배점", "핵심 요소", "부분 점수 기준"]
